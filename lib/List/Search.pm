@@ -3,11 +3,14 @@ use warnings;
 
 package List::Search;
 
-our $VERSION = '0.1';
+our $VERSION = '0.2';
 
 use vars qw(@ISA @EXPORT_OK);
 @ISA       = qw(Exporter);
-@EXPORT_OK = qw( list_search nlist_search custom_list_search );
+@EXPORT_OK = qw(
+  list_search   nlist_search   custom_list_search
+  list_contains nlist_contains custom_list_contains
+);
 
 =head1 NAME
 
@@ -20,18 +23,18 @@ List::Search - fast searching of sorted lists
     # Create a list to search
     my @list = sort qw( bravo charlie delta );
 
-    # Search for a value, returns the index of first m
-    print list_search( 'charlie', \@list );    #  1
+    # Search for a value, returns the index of first match
     print list_search( 'alpha',   \@list );    #  0
-    print list_search( 'zebra',   \@list );    #  2
+    print list_search( 'charlie', \@list );    #  1
+    print list_search( 'zebra',   \@list );    #  -1
 
     # Search numerically
     my @numbers = sort { $a <=> $b } ( 10, 20, 100, 200, );
-    print nlist_search ( 20, \@numbers );         #  2
+    print nlist_search( 20, \@numbers );       #  2
 
     # Search using some other comparison
-    my $cmp_code = sub { lc($_[0]) cmp lc($_[1]) };
-    my @custom_list = sort { $cmp_code->($a, $b) } qw( FOO bar BAZ bundy );
+    my $cmp_code = sub { lc( $_[0] ) cmp lc( $_[1] ) };
+    my @custom_list = sort { $cmp_code->( $a, $b ) } qw( FOO bar BAZ bundy );
     print list_search_generic( $cmp_code, 'foo', \@custom_list );
 
 =head1 DESCRIPTION
@@ -65,9 +68,7 @@ match then returns C<-1>.
 
 sub list_search {
     my ( $key, $array_ref ) = @_;
-    my $code = sub { $_[0] cmp $_[1] };
-
-    return custom_list_search( $code, $key, $array_ref );
+    return custom_list_search( \&_alpha_sort, $key, $array_ref );
 }
 
 =head2 nlist_search
@@ -82,9 +83,7 @@ no match then returns C<-1>.
 
 sub nlist_search {
     my ( $key, $array_ref ) = @_;
-    my $code = sub { $_[0] <=> $_[1] };
-
-    return custom_list_search( $code, $key, $array_ref );
+    return custom_list_search( \&_numeric_sort, $key, $array_ref );
 }
 
 =head2 custom_list_search
@@ -143,6 +142,48 @@ sub custom_list_search {
     # $mid is correct
     return $mid;
 }
+
+=head2 list_contains, nlist_contains, custom_list_contains
+
+    my $bool =  list_contains( $key, \@sorted_list );   # string sort
+    my $bool = nlist_contains( $key, \@sorted_list );   # number sort
+
+    my $bool = custom_list_contains( $cmp_sub_ref, $key, \@sorted_list );
+
+Returns true if C<$key> was found in the list, false otherwise. 
+
+=cut
+
+
+
+sub list_contains {
+    my ( $key, $array_ref ) = @_;
+    return custom_list_contains( \&_alpha_sort, $key, $array_ref );
+}
+
+sub nlist_contains {
+    my ( $key, $array_ref ) = @_;
+    return custom_list_contains( \&_numeric_sort, $key, $array_ref );
+}
+
+sub custom_list_contains {
+    my ( $code, $key, $array_ref ) = @_;
+
+    # Get the index of the key
+    my $idx = custom_list_search( $code, $key, $array_ref );
+
+    # Compare the key to the index
+    my $cmp_result = $code->( $key, $array_ref->[$idx] );
+
+    return $cmp_result == 0    # is there a difference?
+      ? 1                      # there was no difference, so $key is in array
+      : 0;                     # $key is not in array
+}
+
+
+
+sub _alpha_sort   { $_[0] cmp $_[1]; }
+sub _numeric_sort { $_[0] <=> $_[1]; }
 
 =head1 AUTHOR
 

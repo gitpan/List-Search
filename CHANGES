@@ -1,4 +1,9 @@
 CHANGES
 
+0.2 - Thu Jan 4 2007 - evdb
 
+  * Added Makefile.PL
 
+  * Fixed typos in docs
+
+  * Added list_contains functions for conveniance
