@@ -3,7 +3,7 @@ use warnings;
 
 package List::Search;
 
-our $VERSION = '0.2';
+our $VERSION = '0.3';
 
 use vars qw(@ISA @EXPORT_OK);
 @ISA       = qw(Exporter);
@@ -109,6 +109,7 @@ sub custom_list_search {
     my ( $cmp_code, $key, $array_ref ) = @_;
 
     my $max_index = scalar(@$array_ref) - 1;
+    return -1 if $max_index < 0;
 
     my $low  = 0;
     my $mid  = undef;
@@ -120,24 +121,21 @@ sub custom_list_search {
 
         my $cmp_result = $cmp_code->( $key, $mid_val );
 
-        if ( $cmp_result >= 1 ) {
+        if ( $cmp_result > 0 ) {
             $low = $mid + 1;
         }
-        elsif ( $cmp_result <= -1 ) {
-            $high = $mid - 1;
-        }
         else {
-            return $mid;    # key found
+            $high = $mid - 1;
         }
     }
 
     # Look at the values here and work out what to return.
 
     # Perhaps there are no matches in the array
-    return -1 if $cmp_code->( $key, $array_ref->[-1] ) eq 1;
+    return -1 if $cmp_code->( $key, $array_ref->[-1] ) == 1;
 
     # Perhaps $mid is just before the best match
-    return $mid + 1 if $cmp_code->( $key, $array_ref->[$mid] ) eq 1;
+    return $mid + 1 if $cmp_code->( $key, $array_ref->[$mid] ) == 1;
 
     # $mid is correct
     return $mid;
@@ -153,8 +151,6 @@ sub custom_list_search {
 Returns true if C<$key> was found in the list, false otherwise. 
 
 =cut
-
-
 
 sub list_contains {
     my ( $key, $array_ref ) = @_;
@@ -180,8 +176,6 @@ sub custom_list_contains {
       : 0;                     # $key is not in array
 }
 
-
-
 sub _alpha_sort   { $_[0] cmp $_[1]; }
 sub _numeric_sort { $_[0] <=> $_[1]; }
 
@@ -193,7 +187,13 @@ L<http://www.ecclestoad.co.uk>
 
 =head1 SEE ALSO
 
-For fast sorting of lists try L<Sort::Key>
+For fast sorting of lists try L<Sort::Key>. For matching on not just the start
+of the item try L<Text::Match::FastAlternatives>. For matching in an unsorted
+list try L<List::MoreUtils>.
+
+=head1 CREDITS
+
+Sean Woolcock submitted several bug fixes which were included in 0.3
 
 =head1 SVN ACCESS
 
